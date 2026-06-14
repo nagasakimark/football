@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pokémon Soccer</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="game-wrapper" id="gameWrapper">
+
+    <!-- TITLE SCREEN -->
+    <div class="screen screen-title active" id="screenTitle">
+      <div class="title-ball-container">
+        <img src="assets/game/ball.png" alt="" class="title-ball">
+      </div>
+      <h1 class="title-text">Pokémon<br>Soccer</h1>
+      <p class="title-sub">Kick &amp; Score!</p>
+      <button class="btn btn-start" id="btnStart">Start Game</button>
+    </div>
+
+    <!-- CATEGORY SCREEN -->
+    <div class="screen screen-categories" id="screenCategories">
+      <div class="categories-header">
+        <h2>Choose a Category</h2>
+      </div>
+      <div class="category-grid" id="categoryGrid"></div>
+    </div>
+
+    <!-- GAME SCREEN -->
+    <div class="screen screen-game" id="screenGame">
+
+      <div class="zoom-target" id="zoomTarget">
+        <div class="goal-bg"></div>
+        <div class="goal-net"></div>
+        <img class="pokemon" id="pokemon" alt="Goalkeeper">
+        <img src="assets/game/ball.png" alt="Ball" class="ball" id="ball">
+      </div>
+
+      <img src="assets/game/motionlines.png" alt="" class="motionlines" id="motionlines">
+
+      <div class="game-header">
+        <button class="btn btn-back" id="btnBack">← Back</button>
+        <div class="scoreboard">
+          <span class="sb-icon">⚽</span>
+          <span class="sb-label">GOAL</span>
+          <span class="sb-value" id="scoreDisplay">0/0</span>
+        </div>
+      </div>
+
+      <div class="choices-area" id="choicesArea">
+        <div class="choices" id="choices"></div>
+      </div>
+
+      <div class="result-overlay hidden" id="resultOverlay">
+        <div class="result-text" id="resultText"></div>
+        <div class="result-actions" id="resultActions">
+          <button class="btn btn-next hidden" id="btnNext">Next Round  →</button>
+          <button class="btn btn-categories hidden" id="btnCategories">More Categories</button>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

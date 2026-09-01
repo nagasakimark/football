@@ -6,51 +6,51 @@
 
 const CATEGORIES = {
   fruits: {
-    label: 'Fruits', folder: 'fruits', ext: 'png',
+    label: 'Fruits', folder: 'fruits', ext: 'png', emoji: '🍎', accent: '#ff4d6d',
     items: ['apples','bananas','cherries','grapefruits','grapes','oranges','peaches','pears','pineapples']
   },
   animals: {
-    label: 'Animals', folder: 'animals', ext: 'png',
+    label: 'Animals', folder: 'animals', ext: 'png', emoji: '🐶', accent: '#f4a261',
     items: ['cats','chickens','cows','dogs','ducks','hamsters','horses','pigs','rabbits']
   },
   animals2: {
-    label: 'Wild Animals', folder: 'animals2', ext: 'png',
+    label: 'Wild Animals', folder: 'animals2', ext: 'png', emoji: '🦁', accent: '#e76f51',
     items: ['bear','elephant','gorilla','hippo','lion','monkey','panda','spider','tiger','zebra']
   },
   colors: {
-    label: 'Colors', folder: 'colors', ext: 'png',
+    label: 'Colors', folder: 'colors', ext: 'png', emoji: '🎨', accent: '#9b5de5',
     items: ['black','blue','brown','gray','green','orange','pink','purple','red','white','yellow']
   },
   days: {
-    label: 'Days', folder: 'days', ext: 'png',
+    label: 'Days', folder: 'days', ext: 'png', emoji: '📅', accent: '#00bbf9',
     items: ['friday','monday','saturday','sunday','thursday','tuesday','wednesday']
   },
   months: {
-    label: 'Months', folder: 'months', ext: 'png',
+    label: 'Months', folder: 'months', ext: 'png', emoji: '🗓️', accent: '#00c9a7',
     items: ['april','august','december','february','january','july','june','march','may','november','october','september']
   },
   'sea-animals': {
-    label: 'Sea Animals', folder: 'sea-animals', ext: 'png',
+    label: 'Sea Animals', folder: 'sea-animals', ext: 'png', emoji: '🐙', accent: '#4cc9f0',
     items: ['crab','dolphin','fish','jellyfish','octopus','penguin','shark','squid','turtle','whale']
   },
   seasons: {
-    label: 'Seasons', folder: 'seasons', ext: 'png',
+    label: 'Seasons', folder: 'seasons', ext: 'png', emoji: '🍂', accent: '#90be6d',
     items: ['autumn','spring','summer','winter']
   },
   sports: {
-    label: 'Sports', folder: 'sports', ext: 'png',
+    label: 'Sports', folder: 'sports', ext: 'png', emoji: '⚽', accent: '#f94144',
     items: ['badminton','baseball','basketball','dodgeball','soccer','tabletennis','tennis','volleyball']
   },
   vegetables: {
-    label: 'Vegetables', folder: 'vegetables', ext: 'png',
+    label: 'Vegetables', folder: 'vegetables', ext: 'png', emoji: '🥕', accent: '#43aa8b',
     items: ['cabbages','carrots','corn','mushrooms','onions','peas','peppers','potatoes','pumpkins','tomatoes']
   },
   prefectures: {
-    label: 'Prefectures', folder: 'prefectures', ext: 'png',
+    label: 'Prefectures', folder: 'prefectures', ext: 'png', emoji: '🗾', accent: '#ef476f',
     items: ['aichi','chiba','fukuoka','hokkaido','hyogo','kanagawa','osaka','saitama','shizuoka','tokyo']
   },
   prizes: {
-    label: 'Prizes', folder: 'prizes',
+    label: 'Prizes', folder: 'prizes', emoji: '🏆', accent: '#ffd166',
     items: [
       { file:'1-1',ext:'png'},{file:'1-2',ext:'png'},{file:'2-1',ext:'png'},{file:'2-2',ext:'png'},
       {file:'3-1',ext:'png'},{file:'3-2',ext:'png'},{file:'4-1',ext:'png'},{file:'4-2',ext:'png'},
@@ -121,6 +121,15 @@ function cacheDom() {
   dom.resultActions = $('resultActions');
   dom.nextBtn = $('btnNext');
   dom.categoriesBtn = $('btnCategories');
+  dom.kickPrompt = $('kickPrompt');
+  dom.hudCategory = $('hudCategory');
+  dom.hudRound = $('hudRound');
+  dom.fxLayer = $('fxLayer');
+  dom.screenFlash = $('screenFlash');
+  dom.resultSub = $('resultSub');
+  dom.gameWrapper = $('gameWrapper');
+  dom.peekLeft = $('peekLeft');
+  dom.peekRight = $('peekRight');
 }
 
 // ===================== HELPERS ==============================
@@ -155,9 +164,14 @@ function labelFromFile(fileName) {
 // ===================== SCREENS ==============================
 
 function showScreen(name) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active', 'screen-enter'));
   const map = { title: dom.title, categories: dom.categories, game: dom.game };
-  if (map[name]) map[name].classList.add('active');
+  if (map[name]) {
+    map[name].classList.add('active', 'screen-enter');
+    map[name].addEventListener('animationend', () => {
+      map[name].classList.remove('screen-enter');
+    }, { once: true });
+  }
   state.screen = name;
 }
 
@@ -166,13 +180,19 @@ function showScreen(name) {
 function buildCategoryGrid() {
   dom.categoryGrid.innerHTML = '';
   const entries = Object.entries(CATEGORIES);
-  for (const [key, cat] of entries) {
+  entries.forEach(([key, cat], i) => {
     const firstItem = cat.items[0];
     const preview = imgPath(cat, firstItem);
 
     const card = document.createElement('div');
     card.className = 'category-card';
     card.dataset.category = key;
+    card.style.setProperty('--accent', cat.accent || '#ffcb05');
+    card.style.animationDelay = `${i * 45}ms`;
+
+    const emoji = document.createElement('div');
+    emoji.className = 'category-emoji';
+    emoji.textContent = cat.emoji || '⭐';
 
     const img = document.createElement('img');
     img.src = preview;
@@ -181,13 +201,15 @@ function buildCategoryGrid() {
     img.onerror = () => { img.src = 'assets/game/ball.png'; };
 
     const label = document.createElement('span');
+    label.className = 'label';
     label.textContent = cat.label;
 
+    card.appendChild(emoji);
     card.appendChild(img);
     card.appendChild(label);
     card.addEventListener('click', () => startGame(key));
     dom.categoryGrid.appendChild(card);
-  }
+  });
 }
 
 // ===================== GAME INIT ============================
@@ -200,6 +222,12 @@ function startGame(categoryKey) {
   state.score.goals = 0;
   state.score.total = 0;
   state.round = 0;
+
+  if (dom.hudCategory) {
+    const cat = CATEGORIES[categoryKey];
+    dom.hudCategory.textContent = `${cat.emoji || ''} ${cat.label}`.trim();
+    dom.hudCategory.style.setProperty('--accent', cat.accent || '#ffcb05');
+  }
 
   showScreen('game');
   resetRound();
@@ -220,6 +248,8 @@ function resetRound() {
   state.locked = false;
   state.round++;
 
+  if (dom.hudRound) dom.hudRound.textContent = `Round ${state.round}`;
+
   resetField();
   renderChoices();
   updateScore();
@@ -231,14 +261,18 @@ function resetField() {
   dom.pokemon.style.transition = 'none';
   void dom.ball.offsetWidth;
 
-  dom.ball.classList.remove('saved');
+  dom.ball.classList.remove('saved', 'ready');
   dom.zoomTarget.classList.remove('zooming');
   dom.motionlines.classList.remove('active');
   dom.choicesArea.classList.remove('hidden');
-  dom.resultOverlay.classList.remove('show');
+  dom.resultOverlay.classList.remove('show', 'goal', 'save');
   dom.resultOverlay.classList.add('hidden');
   dom.nextBtn.classList.add('hidden');
   dom.categoriesBtn.classList.add('hidden');
+  if (dom.kickPrompt) dom.kickPrompt.classList.add('hidden');
+  if (dom.fxLayer) dom.fxLayer.innerHTML = '';
+  if (dom.screenFlash) dom.screenFlash.className = 'screen-flash';
+  if (dom.resultSub) dom.resultSub.textContent = '';
   dom.pokemon.className = 'pokemon';
   dom.pokemon.src = `assets/pokemon/${state.pokemon}`;
 
@@ -255,33 +289,59 @@ function resetField() {
   state.pendingShoot = null;
 }
 
-const ARROWS = ['←', '↑', '→'];
+const DIR_LABELS = ['← Left', '↑ Center', 'Right →'];
+
+function choiceLabel(item) {
+  return typeof item === 'string' ? labelFromFile(item) : item.file;
+}
 
 function renderChoices() {
   dom.choices.innerHTML = '';
   state.choices.forEach((choice, i) => {
-    const card = document.createElement('div');
+    const label = choiceLabel(choice.item);
+    const direction = DIR_LABELS[i];
+
+    const card = document.createElement('button');
+    card.type = 'button';
     card.className = 'choice-card';
     card.dataset.index = i;
 
-    const img = document.createElement('img');
+    card.innerHTML = `
+      <div class="ptcg-frame">
+        <div class="ptcg-inner">
+          <header class="ptcg-header">
+            <span class="ptcg-name"></span>
+            <span class="ptcg-hp"><small>HP</small> ⚽</span>
+          </header>
+          <div class="ptcg-art-wrap">
+            <div class="ptcg-art">
+              <img alt="">
+              <span class="ptcg-holo"></span>
+            </div>
+          </div>
+          <div class="ptcg-stage">Basic · Favorite</div>
+          <div class="ptcg-body">
+            <div class="ptcg-move">
+              <span class="ptcg-energy">⚽</span>
+              <span class="ptcg-move-name"></span>
+            </div>
+            <p class="ptcg-flavor"></p>
+          </div>
+          <footer class="ptcg-footer">Illus. Pokémon Soccer</footer>
+        </div>
+      </div>
+    `;
+
+    card.querySelector('.ptcg-name').textContent = label;
+    card.querySelector('.ptcg-move-name').textContent = direction;
+    card.querySelector('.ptcg-flavor').textContent = `I like ${label}. ${direction}`;
+
+    const img = card.querySelector('.ptcg-art img');
     img.src = choice.imgSrc;
-    img.alt = '';
+    img.alt = label;
     img.loading = 'eager';
     img.onerror = () => { img.src = 'assets/game/ball.png'; };
 
-    const label = document.createElement('div');
-    label.className = 'choice-label';
-    const item = choice.item;
-    label.textContent = typeof item === 'string' ? labelFromFile(item) : item.file;
-
-    const arrow = document.createElement('div');
-    arrow.className = 'choice-arrow';
-    arrow.textContent = ARROWS[i];
-
-    card.appendChild(img);
-    card.appendChild(label);
-    card.appendChild(arrow);
     card.addEventListener('click', () => selectChoice(i));
     dom.choices.appendChild(card);
   });
@@ -327,11 +387,20 @@ function selectChoice(index) {
     if (shootHandler) dom.ball.removeEventListener('click', shootHandler);
     shootHandler = () => doShoot(choice.outcome, index);
     dom.ball.addEventListener('click', shootHandler, { once: true });
+
+    setTimeout(() => {
+      if (state.pendingShoot) {
+        dom.ball.classList.add('ready');
+        if (dom.kickPrompt) dom.kickPrompt.classList.remove('hidden');
+      }
+    }, 420);
   }, 350);
 }
 
 function doShoot(outcome, direction) {
   dom.ball.style.pointerEvents = '';
+  dom.ball.classList.remove('ready');
+  if (dom.kickPrompt) dom.kickPrompt.classList.add('hidden');
   animateKick(outcome, direction);
 }
 
@@ -408,7 +477,10 @@ function animateKick(outcome, directionIdx) {
       dom.pokemon.style.transition = 'transform 0.2s';
       dom.pokemon.classList.add('saved');
 
-      setTimeout(() => showResult(outcome), 450);
+      setTimeout(() => {
+        shakeScreen();
+        showResult(outcome);
+      }, 450);
     } else {
       const dropY = yMove + 100;
 
@@ -420,13 +492,19 @@ function animateKick(outcome, directionIdx) {
       dom.pokemon.style.transition = 'transform 0.2s';
       dom.pokemon.classList.add('missed');
 
-      setTimeout(() => showResult(outcome), 250);
+      setTimeout(() => {
+        shakeScreen();
+        showResult(outcome);
+      }, 250);
     }
   }, 950);
 }
 
 function showResult(outcome) {
-  dom.resultOverlay.classList.remove('hidden');
+  dom.choicesArea.classList.add('hidden');
+  if (dom.kickPrompt) dom.kickPrompt.classList.add('hidden');
+  dom.resultOverlay.classList.remove('hidden', 'goal', 'save');
+  dom.resultOverlay.classList.add(outcome === 'goal' ? 'goal' : 'save');
 
   requestAnimationFrame(() => {
     dom.resultOverlay.classList.add('show');
@@ -438,8 +516,14 @@ function showResult(outcome) {
     playSound('goalmiss', 0, 0.4);
   }
 
+  flashScreen(outcome);
+  burstFX(outcome);
+
   dom.resultText.textContent = outcome === 'goal' ? 'GOAL!' : 'SAVED!';
   dom.resultText.className = 'result-text ' + outcome;
+  if (dom.resultSub) {
+    dom.resultSub.textContent = outcome === 'goal' ? 'What a strike!' : 'Great save!';
+  }
 
   state.score.total++;
   if (outcome === 'goal') state.score.goals++;
@@ -453,6 +537,48 @@ function showResult(outcome) {
   }, 800);
 }
 
+function shakeScreen() {
+  if (!dom.gameWrapper) return;
+  dom.gameWrapper.classList.remove('shake');
+  void dom.gameWrapper.offsetWidth;
+  dom.gameWrapper.classList.add('shake');
+  setTimeout(() => dom.gameWrapper.classList.remove('shake'), 500);
+}
+
+function flashScreen(outcome) {
+  if (!dom.screenFlash) return;
+  dom.screenFlash.className = 'screen-flash ' + (outcome === 'goal' ? 'goal' : 'save');
+  setTimeout(() => { dom.screenFlash.className = 'screen-flash'; }, 560);
+}
+
+function burstFX(outcome) {
+  if (!dom.fxLayer) return;
+  dom.fxLayer.innerHTML = '';
+  const colors = outcome === 'goal'
+    ? ['#ffcb05', '#ee1515', '#ffffff', '#2a75bb', '#43aa8b', '#ff7b00']
+    : ['#7ec8ff', '#2a75bb', '#ffffff', '#94a3b8'];
+  const count = outcome === 'goal' ? 42 : 20;
+  for (let i = 0; i < count; i++) {
+    const p = document.createElement('span');
+    const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.4;
+    const dist = 90 + Math.random() * 220;
+    p.className = 'confetti' + (i % 3 === 0 ? ' circle' : '');
+    p.style.setProperty('--c', colors[i % colors.length]);
+    p.style.setProperty('--dx', `${Math.cos(angle) * dist}px`);
+    p.style.setProperty('--dy', `${Math.sin(angle) * dist - 40}px`);
+    p.style.setProperty('--rot', `${180 + Math.random() * 420}deg`);
+    p.style.animationDelay = `${Math.random() * 0.08}s`;
+    dom.fxLayer.appendChild(p);
+  }
+}
+
+function setTitlePeeks() {
+  if (!dom.peekLeft || !dom.peekRight || !POKEMON_FILES.length) return;
+  const picks = shuffle(POKEMON_FILES);
+  dom.peekLeft.src = `assets/pokemon/${picks[0]}`;
+  dom.peekRight.src = `assets/pokemon/${picks[1] || picks[0]}`;
+}
+
 function nextRound() {
   resetRound();
 }
@@ -461,10 +587,8 @@ function backToCategories() {
   showScreen('categories');
 }
 
-// ===================== SOUND (Web Audio API) ================
+// ===================== SOUND =================================
 
-let audioCtx = null;
-const audioDecoded = {};
 const audioDefs = {
   kick: 'assets/sounds/ballkick.wav',
   goalbounce: 'assets/sounds/goalbounce.wav',
@@ -472,57 +596,50 @@ const audioDefs = {
   goalmiss: 'assets/sounds/goalmiss.mp3'
 };
 
-function playSound(name, delay = 0, volume) {
-  if (window.location.protocol === 'file:') return;
-  if (!audioCtx) return;
-
-  const playAt = audioCtx.currentTime + delay;
-
-  const schedule = buf => {
-    try {
-      const source = audioCtx.createBufferSource();
-      source.buffer = buf;
-      const gain = audioCtx.createGain();
-      gain.gain.value = volume ?? (name === 'kick' ? 0.7 : 1.0);
-      source.connect(gain);
-      gain.connect(audioCtx.destination);
-      source.start(Math.max(playAt, audioCtx.currentTime));
-    } catch (e) {
-      console.warn('Audio schedule error:', e);
-    }
-  };
-
-  if (audioDecoded[name]) {
-    schedule(audioDecoded[name]);
-    return;
-  }
-
-  fetch(audioDefs[name])
-    .then(r => { if (!r.ok) throw Error('fetch failed'); return r.arrayBuffer(); })
-    .then(buf => audioCtx.decodeAudioData(buf))
-    .then(decoded => {
-      audioDecoded[name] = decoded;
-      schedule(decoded);
-    })
-    .catch(e => console.warn('Audio load error:', name, e));
-}
+const audioEls = {};
+let audioReady = false;
 
 function initAudio() {
-  if (audioCtx) return;
-  try {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    audioCtx.resume();
-    // Pre-decode in background so it's ready when user reaches game
-    for (const [key, url] of Object.entries(audioDefs)) {
-      fetch(url)
-        .then(r => { if (!r.ok) throw Error('fetch failed'); return r.arrayBuffer(); })
-        .then(buf => audioCtx.decodeAudioData(buf))
-        .then(decoded => { audioDecoded[key] = decoded; })
-        .catch(e => console.warn('Audio preload error:', key, e));
-    }
-  } catch (e) {
-    console.warn('Audio init error:', e);
+  if (audioReady) return;
+  audioReady = true;
+
+  for (const [name, url] of Object.entries(audioDefs)) {
+    const el = new Audio(url);
+    el.preload = 'auto';
+    el.playsInline = true;
+    audioEls[name] = el;
+    el.load();
   }
+
+  const unlock = audioEls.kick;
+  if (!unlock) return;
+  const prev = unlock.volume;
+  unlock.volume = 0.001;
+  const p = unlock.play();
+  if (p && p.then) {
+    p.then(() => {
+      unlock.pause();
+      unlock.currentTime = 0;
+      unlock.volume = prev || 0.7;
+    }).catch(() => {
+      unlock.volume = prev || 0.7;
+    });
+  }
+}
+
+function playSound(name, delay = 0, volume) {
+  const run = () => {
+    const src = audioDefs[name];
+    if (!src) return;
+    const a = new Audio(src);
+    a.playsInline = true;
+    a.volume = volume ?? (name === 'kick' ? 0.7 : 1.0);
+    const p = a.play();
+    if (p && p.catch) p.catch(err => console.warn('Audio play error:', name, err));
+  };
+
+  if (delay) setTimeout(run, delay * 1000);
+  else run();
 }
 
 // ===================== IMAGE PRELOAD ========================
@@ -537,6 +654,7 @@ function preloadImages() {
 document.addEventListener('DOMContentLoaded', () => {
   cacheDom();
   preloadImages();
+  setTitlePeeks();
 
   dom.startBtn.addEventListener('click', () => {
     initAudio();

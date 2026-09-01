@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pokémon Soccer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Fredoka:wght@500;600;700&family=Luckiest+Guy&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -11,18 +14,46 @@
 
     <!-- TITLE SCREEN -->
     <div class="screen screen-title active" id="screenTitle">
-      <div class="title-ball-container">
-        <img src="assets/game/ball.png" alt="" class="title-ball">
+      <div class="stadium-bg"></div>
+      <div class="stadium-vignette"></div>
+      <div class="light-beam light-beam-1"></div>
+      <div class="light-beam light-beam-2"></div>
+      <div class="light-beam light-beam-3"></div>
+      <div class="float-orbs" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span><span></span>
       </div>
-      <h1 class="title-text">Pokémon<br>Soccer</h1>
-      <p class="title-sub">Kick &amp; Score!</p>
-      <button class="btn btn-start" id="btnStart">Start Game</button>
+      <img class="title-peek title-peek-left" id="peekLeft" alt="">
+      <img class="title-peek title-peek-right" id="peekRight" alt="">
+      <div class="grass-strip"></div>
+
+      <div class="title-content">
+        <div class="title-chip">Classroom Match</div>
+        <div class="title-ball-container">
+          <span class="title-ball-glow"></span>
+          <img src="assets/game/ball.png" alt="" class="title-ball">
+        </div>
+        <h1 class="title-text">
+          <span class="title-line title-line-1">Pokémon</span>
+          <span class="title-line title-line-2">Soccer</span>
+        </h1>
+        <p class="title-sub">Say it · Kick it · Score it</p>
+        <button class="btn btn-start" id="btnStart"><span>Let's Play!</span></button>
+      </div>
     </div>
 
     <!-- CATEGORY SCREEN -->
     <div class="screen screen-categories" id="screenCategories">
+      <div class="stadium-bg stadium-bg-dim"></div>
+      <div class="stadium-vignette"></div>
       <div class="categories-header">
-        <h2>Choose a Category</h2>
+        <div class="banner">
+          <span class="banner-star">★</span>
+          <div class="banner-copy">
+            <h2>Choose a Category</h2>
+            <p>What's your favorite?</p>
+          </div>
+          <span class="banner-star">★</span>
+        </div>
       </div>
       <div class="category-grid" id="categoryGrid"></div>
     </div>
@@ -41,21 +72,38 @@
 
       <div class="game-header">
         <button class="btn btn-back" id="btnBack">← Back</button>
-        <div class="scoreboard">
-          <span class="sb-icon">⚽</span>
-          <span class="sb-label">GOAL</span>
-          <span class="sb-value" id="scoreDisplay">0/0</span>
+        <div class="hud-right">
+          <div class="hud-category" id="hudCategory"></div>
+          <div class="scoreboard">
+            <span class="sb-icon">⚽</span>
+            <div class="sb-copy">
+              <span class="sb-label">Goals</span>
+              <span class="sb-value" id="scoreDisplay">0/0</span>
+            </div>
+          </div>
+          <div class="hud-round" id="hudRound">Round 1</div>
         </div>
       </div>
 
       <div class="choices-area" id="choicesArea">
+        <div class="speak-prompt" id="speakPrompt">What's your favorite?</div>
         <div class="choices" id="choices"></div>
       </div>
 
+      <div class="kick-prompt hidden" id="kickPrompt">
+        <span class="kick-prompt-text">Tap the ball!</span>
+        <span class="kick-prompt-arrow">▼</span>
+      </div>
+
+      <div class="fx-layer" id="fxLayer"></div>
+      <div class="screen-flash" id="screenFlash"></div>
+
       <div class="result-overlay hidden" id="resultOverlay">
+        <div class="result-burst" id="resultBurst"></div>
         <div class="result-text" id="resultText"></div>
+        <div class="result-sub" id="resultSub"></div>
         <div class="result-actions" id="resultActions">
-          <button class="btn btn-next hidden" id="btnNext">Next Round  →</button>
+          <button class="btn btn-next hidden" id="btnNext">Next Round →</button>
           <button class="btn btn-categories hidden" id="btnCategories">More Categories</button>
         </div>
       </div>

@@ -49,6 +49,11 @@ const CATEGORIES = {
     label: 'Prefectures', folder: 'prefectures', ext: 'png', emoji: '🗾', accent: '#ef476f',
     items: ['aichi','chiba','fukuoka','hokkaido','hyogo','kanagawa','osaka','saitama','shizuoka','tokyo']
   },
+  feelings: {
+    label: 'Feelings', folder: 'feelings', ext: 'png', emoji: '😊', accent: '#ff9f1c',
+    question: 'How are you?',
+    items: ['angry','cold','happy','hot','hungry','sad','sleepy','tired']
+  },
   prizes: {
     label: 'Prizes', folder: 'prizes', emoji: '🏆', accent: '#ffd166',
     items: [
@@ -122,6 +127,7 @@ function cacheDom() {
   dom.nextBtn = $('btnNext');
   dom.categoriesBtn = $('btnCategories');
   dom.kickPrompt = $('kickPrompt');
+  dom.speakPrompt = $('speakPrompt');
   dom.hudCategory = $('hudCategory');
   dom.hudRound = $('hudRound');
   dom.fxLayer = $('fxLayer');
@@ -229,6 +235,10 @@ function startGame(categoryKey) {
     dom.hudCategory.style.setProperty('--accent', cat.accent || '#ffcb05');
   }
 
+  if (dom.speakPrompt) {
+    dom.speakPrompt.textContent = categoryKey === 'feelings' ? 'How are you?' : "What's your favorite?";
+  }
+
   showScreen('game');
   resetRound();
 }
@@ -332,9 +342,14 @@ function renderChoices() {
       </div>
     `;
 
+    const isFeelings = state.category === 'feelings';
     card.querySelector('.ptcg-name').textContent = label;
     card.querySelector('.ptcg-move-name').textContent = direction;
-    card.querySelector('.ptcg-flavor').textContent = `I like ${label}. ${direction}`;
+    card.querySelector('.ptcg-flavor').textContent = isFeelings ? `I am ${label}. ${direction}` : `I like ${label}. ${direction}`;
+    const stageEl = card.querySelector('.ptcg-stage');
+    if (stageEl) {
+      stageEl.textContent = isFeelings ? 'Basic · Feeling' : 'Basic · Favorite';
+    }
 
     const img = card.querySelector('.ptcg-art img');
     img.src = choice.imgSrc;

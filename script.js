@@ -99,8 +99,47 @@ const state = {
   ballTarget: null,
   score: { goals: 0, total: 0 },
   locked: false,
-  round: 0
+  round: 0,
+  streak: 0,
+  best: 0,
+  golden: false
 };
+
+// TCG energy-type theming per classroom category (authentic card colors)
+const TYPE_META = {
+  fruits:      { type: 'Grass',     icon: '🌿', color: '#3d9950', light: '#b7e4a8', energy: '🌿' },
+  vegetables:  { type: 'Grass',     icon: '🌿', color: '#2e7d32', light: '#a5d6a7', energy: '🌿' },
+  animals:     { type: 'Colorless', icon: '⭐', color: '#8d7b5e', light: '#e8dcc0', energy: '⭐' },
+  animals2:    { type: 'Fighting',  icon: '🪨', color: '#b5672a', light: '#f0c896', energy: '👊' },
+  colors:      { type: 'Psychic',   icon: '👁', color: '#8e44ad', light: '#d7b5f0', energy: '🔮' },
+  days:        { type: 'Lightning', icon: '⚡', color: '#c9960a', light: '#ffe89a', energy: '⚡' },
+  months:      { type: 'Water',     icon: '💧', color: '#1f7ab5', light: '#a8dcf5', energy: '💧' },
+  'sea-animals': { type: 'Water',   icon: '🌊', color: '#14708f', light: '#9adcF0', energy: '💧' },
+  seasons:     { type: 'Fire',      icon: '🔥', color: '#c33d1f', light: '#f5b795', energy: '🔥' },
+  sports:      { type: 'Fighting',  icon: '⚽', color: '#b03030', light: '#f2aaaa', energy: '⚽' },
+  prefectures: { type: 'Metal',     icon: '⚙', color: '#5f6f7f', light: '#c3cfdb', energy: '🔩' },
+  feelings:    { type: 'Psychic',   icon: '💖', color: '#c2438b', light: '#f3b4d4', energy: '💖' },
+  prizes:      { type: 'Colorless', icon: '🏆', color: '#a8860a', light: '#ffe89a', energy: '⭐' }
+};
+
+const GOAL_SUBS = ['What a strike!', 'Top bins!', 'Unstoppable!', 'The crowd goes wild!', 'Absolute rocket!'];
+const SAVE_SUBS = ['Great save!', 'Denied!', 'What a block!', 'The keeper reads it!', 'So close!'];
+const KICK_NAMES = ['Quick Kick', 'Super Kick', 'Dashing Tackle'];
+
+function typeMeta() {
+  return TYPE_META[state.category] || TYPE_META.sports;
+}
+
+function dexNumber(label) {
+  let h = 0;
+  for (let i = 0; i < label.length; i++) h = (h * 31 + label.charCodeAt(i)) % 151;
+  return String(h + 1).padStart(3, '0');
+}
+
+function hpFor(index) {
+  const pool = [60, 70, 70, 80, 90];
+  return pool[(state.round * 2 + index * 3) % pool.length];
+}
 
 // ===================== DOM REFS =============================
 
@@ -136,6 +175,11 @@ function cacheDom() {
   dom.gameWrapper = $('gameWrapper');
   dom.peekLeft = $('peekLeft');
   dom.peekRight = $('peekRight');
+  dom.roundBanner = $('roundBanner');
+  dom.roundBannerKicker = $('roundBannerKicker');
+  dom.roundBannerText = $('roundBannerText');
+  dom.floatLayer = $('floatLayer');
+  dom.goalNet = document.querySelector('.goal-net');
 }
 
 // ===================== HELPERS ==============================
@@ -228,6 +272,9 @@ function startGame(categoryKey) {
   state.score.goals = 0;
   state.score.total = 0;
   state.round = 0;
+  state.streak = 0;
+  state.best = 0;
+  state.golden = false;
 
   if (dom.hudCategory) {
     const cat = CATEGORIES[categoryKey];
@@ -257,12 +304,19 @@ function resetRound() {
   state.pokemon = pick(POKEMON_FILES);
   state.locked = false;
   state.round++;
+  // ~1 in 8 rounds is a GOLDEN BALL round (bonus flair)
+  state.golden = Math.random() < 0.12;
 
   if (dom.hudRound) dom.hudRound.textContent = `Round ${state.round}`;
 
   resetField();
   renderChoices();
   updateScore();
+  playWhistle();
+  showRoundBanner(
+    `Round ${state.round}`,
+    state.golden ? '✨ GOLDEN BALL — extra glory! ✨' : pick(['Choose your kick!', 'Say it loud!', 'Pick a card!'])
+  );
 }
 
 function resetField() {
@@ -286,6 +340,7 @@ function resetField() {
   dom.pokemon.className = 'pokemon';
   dom.pokemon.src = `assets/pokemon/${state.pokemon}`;
 
+  dom.ball.classList.toggle('golden', !!state.golden);
   dom.ball.style.opacity = '0';
   dom.ball.style.transform = 'translateX(-50%) translateY(100px)';
   dom.ball.style.transition = '';
@@ -307,55 +362,98 @@ function choiceLabel(item) {
 
 function renderChoices() {
   dom.choices.innerHTML = '';
+  const meta = typeMeta();
+  const isFeelings = state.category === 'feelings';
   state.choices.forEach((choice, i) => {
     const label = choiceLabel(choice.item);
     const direction = DIR_LABELS[i];
+    const hp = hpFor(i);
+    const dex = dexNumber(label);
+    const dmg1 = 10 + ((state.round + i * 2) % 3) * 10;
+    const dmg2 = 30 + ((state.round + i) % 3) * 10;
 
     const card = document.createElement('button');
     card.type = 'button';
-    card.className = 'choice-card';
+    card.className = 'choice-card deal-in';
     card.dataset.index = i;
+    card.style.setProperty('--deal', `${i * 90}ms`);
+    card.style.setProperty('--t1', meta.color);
+    card.style.setProperty('--t2', meta.light);
+    card.setAttribute('aria-label', `${label}, ${direction}`);
 
     card.innerHTML = `
       <div class="ptcg-frame">
-        <div class="ptcg-inner">
-          <header class="ptcg-header">
+        <div class="ptcg-card">
+          <header class="ptcg-top">
+            <span class="ptcg-basic">BASIC</span>
             <span class="ptcg-name"></span>
-            <span class="ptcg-hp"><small>HP</small> ⚽</span>
+            <span class="ptcg-hp"><small>HP</small><b></b><i class="ptcg-e"></i></span>
           </header>
-          <div class="ptcg-art-wrap">
+          <div class="ptcg-art-frame">
             <div class="ptcg-art">
               <img alt="">
               <span class="ptcg-holo"></span>
+              <span class="ptcg-glare"></span>
             </div>
           </div>
-          <div class="ptcg-stage">Basic · Favorite</div>
-          <div class="ptcg-body">
-            <div class="ptcg-move">
-              <span class="ptcg-energy">⚽</span>
+          <div class="ptcg-dexbar"><span></span><span class="ptcg-set">◈</span></div>
+          <div class="ptcg-attacks">
+            <div class="ptcg-attack">
+              <span class="ptcg-cost"><i class="ptcg-e"></i></span>
               <span class="ptcg-move-name"></span>
+              <span class="ptcg-dmg"></span>
+            </div>
+            <div class="ptcg-attack">
+              <span class="ptcg-cost"><i class="ptcg-e"></i><i class="ptcg-e"></i></span>
+              <span class="ptcg-move-name2"></span>
+              <span class="ptcg-dmg2"></span>
             </div>
             <p class="ptcg-flavor"></p>
           </div>
-          <footer class="ptcg-footer">Illus. Pokémon Soccer</footer>
+          <footer class="ptcg-meta">
+            <span class="ptcg-wrr"></span>
+            <span class="ptcg-num"></span>
+          </footer>
         </div>
       </div>
     `;
 
-    const isFeelings = state.category === 'feelings';
     card.querySelector('.ptcg-name').textContent = label;
-    card.querySelector('.ptcg-move-name').textContent = direction;
-    card.querySelector('.ptcg-flavor').textContent = isFeelings ? `I am ${label}. ${direction}` : `I like ${label}. ${direction}`;
-    const stageEl = card.querySelector('.ptcg-stage');
-    if (stageEl) {
-      stageEl.textContent = isFeelings ? 'Basic · Feeling' : 'Basic · Favorite';
-    }
+    card.querySelector('.ptcg-hp b').textContent = hp;
+    card.querySelector('.ptcg-hp .ptcg-e').textContent = meta.energy;
+    card.querySelector('.ptcg-dexbar span').textContent =
+      `${meta.type} Pokémon · HT 2'04" · NO. ${dex}`;
+    card.querySelector('.ptcg-move-name').textContent = KICK_NAMES[i % KICK_NAMES.length];
+    card.querySelector('.ptcg-dmg').textContent = dmg1;
+    card.querySelector('.ptcg-move-name2').textContent = direction;
+    card.querySelector('.ptcg-dmg2').textContent = dmg2;
+    card.querySelectorAll('.ptcg-cost .ptcg-e').forEach(el => { el.textContent = meta.energy; });
+    card.querySelector('.ptcg-flavor').textContent =
+      isFeelings ? `I am ${label}! ${direction}` : `I like ${label}! ${direction}`;
+    card.querySelector('.ptcg-wrr').textContent =
+      `weakness ${meta.icon} ×2 · retreat ⭐`;
+    card.querySelector('.ptcg-num').textContent = `${dex}/151 ★`;
 
     const img = card.querySelector('.ptcg-art img');
     img.src = choice.imgSrc;
     img.alt = label;
     img.loading = 'eager';
     img.onerror = () => { img.src = 'assets/game/ball.png'; };
+
+    // 3D tilt + glare follow (authentic holo feel)
+    card.addEventListener('pointermove', (ev) => {
+      const r = card.getBoundingClientRect();
+      const px = (ev.clientX - r.left) / r.width - 0.5;
+      const py = (ev.clientY - r.top) / r.height - 0.5;
+      card.style.setProperty('--ry', `${px * 14}deg`);
+      card.style.setProperty('--rx', `${-py * 12}deg`);
+      card.style.setProperty('--mx', `${(px + 0.5) * 100}%`);
+      card.style.setProperty('--my', `${(py + 0.5) * 100}%`);
+    });
+    card.addEventListener('pointerleave', () => {
+      card.style.setProperty('--ry', '0deg');
+      card.style.setProperty('--rx', '0deg');
+    });
 
     card.addEventListener('click', () => selectChoice(i));
     dom.choices.appendChild(card);
@@ -364,6 +462,13 @@ function renderChoices() {
 
 function updateScore() {
   dom.scoreDisplay.textContent = `${state.score.goals}/${state.score.total}`;
+  const board = dom.scoreDisplay.closest('.scoreboard');
+  if (board) board.classList.toggle('on-fire', state.streak >= 2);
+  if (dom.hudRound) {
+    dom.hudRound.textContent = state.streak >= 2
+      ? `Round ${state.round} · 🔥×${state.streak}`
+      : `Round ${state.round}`;
+  }
 }
 
 // ===================== CHOICE HANDLING ======================
@@ -376,11 +481,14 @@ function selectChoice(index) {
 
   const choice = state.choices[index];
 
+  playBlip();
   const cards = dom.choices.querySelectorAll('.choice-card');
   cards.forEach((c, i) => {
     c.classList.add('disabled');
+    c.classList.remove('deal-in');
     if (i === index) {
       c.classList.add('chosen');
+      burstSparklesAt(c, 14);
     } else {
       c.classList.add('fade');
     }
@@ -435,6 +543,8 @@ function calcBallY() {
 
 function animateKick(outcome, directionIdx) {
   playSound('kick');
+  spawnKickDust();
+  startBallTrail();
 
   const screenW = document.getElementById('gameWrapper').offsetWidth;
   const ballPct = POSITIONS[directionIdx].pct;
@@ -473,6 +583,7 @@ function animateKick(outcome, directionIdx) {
 
   // Phase 2: After ball reaches goal area
   setTimeout(() => {
+    stopBallTrail();
     dom.motionlines.classList.remove('active');
     dom.pokemon.classList.remove('diving', 'spin');
 
@@ -493,7 +604,7 @@ function animateKick(outcome, directionIdx) {
       dom.pokemon.classList.add('saved');
 
       setTimeout(() => {
-        shakeScreen();
+        shakeScreen('');
         showResult(outcome);
       }, 450);
     } else {
@@ -506,9 +617,10 @@ function animateKick(outcome, directionIdx) {
 
       dom.pokemon.style.transition = 'transform 0.2s';
       dom.pokemon.classList.add('missed');
+      rippleNet();
 
       setTimeout(() => {
-        shakeScreen();
+        shakeScreen(state.golden ? 'big' : '');
         showResult(outcome);
       }, 250);
     }
@@ -532,17 +644,38 @@ function showResult(outcome) {
   }
 
   flashScreen(outcome);
-  burstFX(outcome);
-
-  dom.resultText.textContent = outcome === 'goal' ? 'GOAL!' : 'SAVED!';
-  dom.resultText.className = 'result-text ' + outcome;
-  if (dom.resultSub) {
-    dom.resultSub.textContent = outcome === 'goal' ? 'What a strike!' : 'Great save!';
-  }
 
   state.score.total++;
-  if (outcome === 'goal') state.score.goals++;
+  if (outcome === 'goal') {
+    state.score.goals++;
+    state.streak++;
+    state.best = Math.max(state.best, state.streak);
+  } else {
+    state.streak = 0;
+  }
   updateScore();
+
+  // Scaled celebration: hotter streak / golden = bigger burst
+  const intensity = outcome === 'goal' ? Math.min(1 + state.streak * 0.35 + (state.golden ? 0.8 : 0), 3) : 1;
+  burstFX(outcome, intensity);
+
+  const isGoldenGoal = outcome === 'goal' && state.golden;
+  dom.resultText.textContent =
+    outcome === 'goal'
+      ? isGoldenGoal ? 'GOLDEN GOAL!' : state.streak >= 3 ? 'ON FIRE!' : state.streak === 2 ? 'GOAL x2!' : 'GOAL!'
+      : 'SAVED!';
+  dom.resultText.className = 'result-text ' + outcome + (isGoldenGoal ? ' golden-text' : '');
+  if (dom.resultSub) {
+    dom.resultSub.textContent =
+      outcome === 'goal'
+        ? isGoldenGoal ? '✨ Shiny and spectacular! ✨' : state.streak >= 2 ? `🔥 ${state.streak} in a row — ${pick(GOAL_SUBS)}` : pick(GOAL_SUBS)
+        : pick(SAVE_SUBS);
+  }
+  floatUp(outcome === 'goal' ? (isGoldenGoal ? '+1 ✨' : state.streak >= 2 ? `+1 🔥×${state.streak}` : '+1') : 'BLOCKED',
+    outcome === 'goal' ? 'float-good' : 'float-bad');
+  if (navigator.vibrate) {
+    try { navigator.vibrate(outcome === 'goal' ? (isGoldenGoal ? [40, 40, 80] : 60) : 25); } catch (e) {}
+  }
 
   setTimeout(() => {
     dom.nextBtn.classList.remove('hidden');
@@ -552,13 +685,125 @@ function showResult(outcome) {
   }, 800);
 }
 
-function shakeScreen() {
+function shakeScreen(power) {
   if (!dom.gameWrapper) return;
-  dom.gameWrapper.classList.remove('shake');
+  dom.gameWrapper.classList.remove('shake', 'shake-big');
   void dom.gameWrapper.offsetWidth;
-  dom.gameWrapper.classList.add('shake');
-  setTimeout(() => dom.gameWrapper.classList.remove('shake'), 500);
+  dom.gameWrapper.classList.add(power === 'big' ? 'shake-big' : 'shake');
+  setTimeout(() => dom.gameWrapper.classList.remove('shake', 'shake-big'), 550);
 }
+
+function showRoundBanner(kicker, text) {
+  if (!dom.roundBanner) return;
+  dom.roundBannerKicker.textContent = kicker;
+  dom.roundBannerText.textContent = text;
+  dom.roundBanner.classList.toggle('golden', !!state.golden);
+  dom.roundBanner.classList.remove('hidden', 'play');
+  void dom.roundBanner.offsetWidth;
+  dom.roundBanner.classList.add('play');
+  clearTimeout(showRoundBanner._t);
+  showRoundBanner._t = setTimeout(() => dom.roundBanner.classList.add('hidden'), 1600);
+}
+
+function floatUp(text, cls) {
+  if (!dom.floatLayer) return;
+  const el = document.createElement('div');
+  el.className = `float-up ${cls || ''}`;
+  el.textContent = text;
+  dom.floatLayer.appendChild(el);
+  setTimeout(() => el.remove(), 1400);
+}
+
+function rippleNet() {
+  const net = dom.goalNet;
+  if (!net) return;
+  net.classList.remove('ripple');
+  void net.offsetWidth;
+  net.classList.add('ripple');
+  setTimeout(() => net.classList.remove('ripple'), 700);
+}
+
+function fieldPoint(clientX, clientY) {
+  const wrap = dom.gameWrapper.getBoundingClientRect();
+  return { x: clientX - wrap.left, y: clientY - wrap.top };
+}
+
+function burstSparklesAt(el, count) {
+  if (!dom.fxLayer || !el) return;
+  const r = el.getBoundingClientRect();
+  const colors = ['#ffcb05', '#ffffff', '#7ec8ff', '#ff9f1c'];
+  for (let i = 0; i < (count || 12); i++) {
+    const p = document.createElement('span');
+    const angle = (Math.PI * 2 * i) / (count || 12) + Math.random() * 0.5;
+    const dist = 40 + Math.random() * 90;
+    const pt = fieldPoint(r.left + r.width / 2, r.top + r.height / 2);
+    p.className = 'sparkle-pop';
+    p.style.left = `${pt.x}px`;
+    p.style.top = `${pt.y}px`;
+    p.style.setProperty('--c', colors[i % colors.length]);
+    p.style.setProperty('--dx', `${Math.cos(angle) * dist}px`);
+    p.style.setProperty('--dy', `${Math.sin(angle) * dist - 30}px`);
+    dom.fxLayer.appendChild(p);
+    setTimeout(() => p.remove(), 750);
+  }
+}
+
+function spawnKickDust() {
+  if (!dom.fxLayer || !dom.ball) return;
+  const r = dom.ball.getBoundingClientRect();
+  const pt = fieldPoint(r.left + r.width / 2, r.top + r.height);
+  for (let i = 0; i < 8; i++) {
+    const p = document.createElement('span');
+    p.className = 'dust-puff';
+    p.style.left = `${pt.x + (Math.random() - 0.5) * 50}px`;
+    p.style.top = `${pt.y - Math.random() * 10}px`;
+    p.style.setProperty('--dx', `${(Math.random() - 0.5) * 120}px`);
+    p.style.animationDelay = `${Math.random() * 0.08}s`;
+    dom.fxLayer.appendChild(p);
+    setTimeout(() => p.remove(), 700);
+  }
+}
+
+let trailTimer = null;
+function startBallTrail() {
+  stopBallTrail();
+  trailTimer = setInterval(() => {
+    if (!dom.ball || !dom.fxLayer) return;
+    const r = dom.ball.getBoundingClientRect();
+    if (!r.width) return;
+    const pt = fieldPoint(r.left + r.width / 2, r.top + r.height / 2);
+    const p = document.createElement('span');
+    p.className = 'trail-puff' + (state.golden ? ' golden' : '');
+    p.style.left = `${pt.x}px`;
+    p.style.top = `${pt.y}px`;
+    dom.fxLayer.appendChild(p);
+    setTimeout(() => p.remove(), 550);
+  }, 40);
+}
+function stopBallTrail() {
+  if (trailTimer) clearInterval(trailTimer);
+  trailTimer = null;
+}
+
+// Tiny UI sounds via WebAudio (no assets needed)
+let actx = null;
+function tone(freq, dur, type, vol, slideTo) {
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = actx.createOscillator();
+    const g = actx.createGain();
+    o.type = type || 'sine';
+    o.frequency.setValueAtTime(freq, actx.currentTime);
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, actx.currentTime + dur);
+    g.gain.setValueAtTime(vol || 0.12, actx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + dur);
+    o.connect(g).connect(actx.destination);
+    o.start();
+    o.stop(actx.currentTime + dur);
+  } catch (e) {}
+}
+function playBlip() { tone(520, 0.12, 'triangle', 0.1, 880); }
+function playWhistle() { tone(2200, 0.16, 'square', 0.05, 2600); setTimeout(() => tone(2200, 0.22, 'square', 0.05, 2600), 180); }
 
 function flashScreen(outcome) {
   if (!dom.screenFlash) return;
@@ -566,24 +811,29 @@ function flashScreen(outcome) {
   setTimeout(() => { dom.screenFlash.className = 'screen-flash'; }, 560);
 }
 
-function burstFX(outcome) {
+function burstFX(outcome, intensity) {
   if (!dom.fxLayer) return;
-  dom.fxLayer.innerHTML = '';
+  const k = intensity || 1;
   const colors = outcome === 'goal'
-    ? ['#ffcb05', '#ee1515', '#ffffff', '#2a75bb', '#43aa8b', '#ff7b00']
+    ? (state.golden
+      ? ['#ffe56a', '#ffcb05', '#ffffff', '#ffb703', '#ff9f1c', '#fff3b0']
+      : ['#ffcb05', '#ee1515', '#ffffff', '#2a75bb', '#43aa8b', '#ff7b00'])
     : ['#7ec8ff', '#2a75bb', '#ffffff', '#94a3b8'];
-  const count = outcome === 'goal' ? 42 : 20;
+  const count = Math.round((outcome === 'goal' ? 42 : 20) * k);
   for (let i = 0; i < count; i++) {
     const p = document.createElement('span');
     const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.4;
-    const dist = 90 + Math.random() * 220;
-    p.className = 'confetti' + (i % 3 === 0 ? ' circle' : '');
+    const dist = (90 + Math.random() * 220) * Math.min(k, 1.6);
+    const isStar = i % 5 === 0 && outcome === 'goal';
+    p.className = 'confetti' + (i % 3 === 0 ? ' circle' : '') + (isStar ? ' star' : '');
+    p.textContent = isStar ? '★' : '';
     p.style.setProperty('--c', colors[i % colors.length]);
     p.style.setProperty('--dx', `${Math.cos(angle) * dist}px`);
     p.style.setProperty('--dy', `${Math.sin(angle) * dist - 40}px`);
     p.style.setProperty('--rot', `${180 + Math.random() * 420}deg`);
     p.style.animationDelay = `${Math.random() * 0.08}s`;
     dom.fxLayer.appendChild(p);
+    setTimeout(() => p.remove(), 1600);
   }
 }
 

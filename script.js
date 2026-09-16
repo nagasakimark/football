@@ -377,8 +377,9 @@ function renderChoices() {
     card.className = 'choice-card deal-in';
     card.dataset.index = i;
     card.style.setProperty('--deal', `${i * 90}ms`);
-    card.style.setProperty('--t1', meta.color);
-    card.style.setProperty('--t2', meta.light);
+    // Standard Pokemon-card blue for every card (classic look)
+    card.style.setProperty('--t1', '#2a75bb');
+    card.style.setProperty('--t2', '#9ac8f0');
     card.setAttribute('aria-label', `${label}, ${direction}`);
 
     card.innerHTML = `

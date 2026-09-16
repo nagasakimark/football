@@ -333,10 +333,10 @@ body {
   align-items: center;
   gap: 14px;
   padding: 8px 28px 10px;
-  background: linear-gradient(180deg, #ff4d4d 0%, var(--poke-red) 55%, #b01010 100%);
-  border: 3px solid #fff;
+  background: linear-gradient(180deg, #3a8ac9 0%, var(--poke-blue) 55%, var(--poke-navy) 100%);
+  border: 3px solid var(--poke-yellow);
   border-radius: 16px;
-  box-shadow: 0 5px 0 #6c0c0c, 0 12px 24px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 5px 0 #0f2744, 0 12px 24px rgba(0, 0, 0, 0.35);
 }
 
 .banner-copy {
@@ -348,7 +348,7 @@ body {
   font-size: clamp(1.15rem, 3vw, 1.9rem);
   color: var(--poke-yellow);
   letter-spacing: 1px;
-  -webkit-text-stroke: 3px #5a0c0c;
+  -webkit-text-stroke: 3px #0f2744;
   paint-order: stroke fill;
   text-shadow: 0 3px 0 rgba(0, 0, 0, 0.25);
 }
@@ -389,14 +389,15 @@ body {
   justify-content: center;
   gap: 6px;
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--accent) 32%, rgba(16, 22, 18, 0.92)) 0%, rgba(8, 12, 10, 0.94) 58%);
-  border: 3px solid color-mix(in srgb, var(--accent) 80%, #fff 20%);
+    radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.22) 0%, transparent 55%),
+    linear-gradient(180deg, #3a8ac9 0%, var(--poke-blue) 45%, var(--poke-navy) 100%);
+  border: 3px solid var(--poke-yellow);
   border-radius: 16px;
   padding: 12px 8px 10px;
   cursor: pointer;
   box-shadow:
-    0 4px 0 color-mix(in srgb, var(--accent) 55%, #000 45%),
-    0 10px 22px rgba(0, 0, 0, 0.28);
+    0 4px 0 #0f2744,
+    0 10px 22px rgba(0, 0, 0, 0.35);
   transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
   animation: cardIn 0.4s ease both;
 }
@@ -408,15 +409,41 @@ body {
   left: 0;
   right: 0;
   height: 7px;
-  background: var(--accent);
+  background: linear-gradient(90deg, var(--poke-yellow-deep), var(--poke-yellow), var(--poke-yellow-deep));
+}
+
+/* Pokeball watermark in the corner */
+.category-card::after {
+  content: "";
+  position: absolute;
+  right: -11px;
+  bottom: -11px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 50%, #fff 0 5px, #1a1a1a 5px 7px, transparent 7px),
+    linear-gradient(180deg, var(--poke-red) 0 46%, #1a1a1a 46% 54%, #fff 54% 100%);
+  border: 2px solid #1a1a1a;
+  opacity: 0.28;
+  pointer-events: none;
+  transition: opacity 0.15s, transform 0.15s;
 }
 
 .category-card:hover {
   transform: translateY(-5px) scale(1.04);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 28%, #fff) 0%, rgba(8, 18, 12, 0.78) 100%);
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.32) 0%, transparent 55%),
+    linear-gradient(180deg, #4a9ad6 0%, #2a75bb 45%, #1d4e89 100%);
   box-shadow:
-    0 8px 0 color-mix(in srgb, var(--accent) 55%, #000 45%),
-    0 16px 30px color-mix(in srgb, var(--accent) 35%, transparent);
+    0 8px 0 #0f2744,
+    0 0 22px rgba(255, 203, 5, 0.55),
+    0 16px 30px rgba(0, 0, 0, 0.4);
+}
+
+.category-card:hover::after {
+  opacity: 0.55;
+  transform: rotate(-14deg) scale(1.1);
 }
 
 .category-card:active {

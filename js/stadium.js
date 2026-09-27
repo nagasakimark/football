@@ -17,6 +17,7 @@ const ZONES = [
 ].map(z => ({ x: GOAL.left + z.u * GOAL.w, y: GOAL.top + z.v * GOAL.h }));
 
 const SPOT = { x: 640, y: 628 };
+const HORIZON_Y = 392;
 const BALL_SIZE = 92;
 const KEEPER_H = 205;
 
@@ -46,9 +47,11 @@ const Stadium = {
     const v = Engine.view();
     // cover the whole visible area (world coords are 1280x720 but the camera may zoom out a bit)
     const ratio = 1652 / 2940;
-    const bw = Math.max(W * 1.1, v.w * 1.05, (v.h * 1.05) / ratio), bh = bw * ratio;
+    const bw = Math.max(W * 1.28, v.w * 1.05, (v.h * 1.05) / ratio), bh = bw * ratio;
     const bx = W / 2 - bw / 2;
-    const by = clamp(H - bh + (bh - H) * 0.35, v.y + v.h - bh, v.y);
+    // place the far edge of the pitch (64% down the image) well above the goal line,
+    // so the goal stands on the grass instead of against the advertising boards
+    const by = clamp(HORIZON_Y - bh * 0.64, v.y + v.h - bh, v.y);
     if (bg) ctx.drawImage(bg, bx, by, bw, bh);
     else { ctx.fillStyle = '#1b5e20'; ctx.fillRect(bx, by, bw, bh); }
 
@@ -103,6 +106,47 @@ const Stadium = {
     return this._goal;
   },
 
+  // Grass under the goal: box lines, goal line and the net's contact shadow
+  drawGoalGround(ctx) {
+    const b = GOAL.bottom, l = GOAL.left, r = GOAL.left + GOAL.w;
+    ctx.save();
+    // painted goal area (six-yard box) in perspective
+    ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+    ctx.lineWidth = 5;
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(l - 150, b + 3);
+    ctx.lineTo(l - 205, b + 72);
+    ctx.lineTo(r + 205, b + 72);
+    ctx.lineTo(r + 150, b + 3);
+    ctx.stroke();
+    // goal line across the pitch
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(-400, b + 3);
+    ctx.lineTo(W + 400, b + 3);
+    ctx.stroke();
+    // soft shadow of the goal frame and net on the grass
+    const g = ctx.createRadialGradient(GOAL.cx, b - 4, 20, GOAL.cx, b - 4, GOAL.w * 0.62);
+    g.addColorStop(0, 'rgba(0,30,0,0.45)');
+    g.addColorStop(1, 'rgba(0,30,0,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.ellipse(GOAL.cx, b - 6, GOAL.w * 0.62, 34, 0, 0, TAU);
+    ctx.fill();
+    // darker contact shadows at the foot of each post
+    [l + 10, r - 10].forEach(x => {
+      const pg = ctx.createRadialGradient(x, b, 2, x, b, 26);
+      pg.addColorStop(0, 'rgba(0,0,0,0.55)');
+      pg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = pg;
+      ctx.beginPath();
+      ctx.ellipse(x, b, 26, 9, 0, 0, TAU);
+      ctx.fill();
+    });
+    ctx.restore();
+  },
+
   // Goal, warped around an impact point for a net "bulge"
   drawGoal(ctx) {
     const sp = this.goalSprite();
@@ -110,6 +154,7 @@ const Stadium = {
     const imp = this.net.impact;
     const gx = GOAL.left, gy = GOAL.top, gw = GOAL.w, gh = GOAL.h;
     const { c, pad, k } = sp;
+    this.drawGoalGround(ctx);
     if (!imp) {
       ctx.drawImage(c, gx - pad, gy - pad, gw + pad * 2, gh + pad * 2);
       return;

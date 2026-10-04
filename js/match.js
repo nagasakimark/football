@@ -192,7 +192,7 @@ const MatchScene = {
         face: renderCardFace({ cat: this.cat, item, img: imgs[i], dir: i }),
         x: 640, y: 900, rot: rand(-0.6, 0.6), scale: 0.7, flip: 0, alpha: 1, glow: 0, seed: Math.random() * 5,
         lift: new Spring(0, 300, 20), pop: new Spring(1, 500, 14), badge: new Spring(1, 500, 12),
-        votes: 0, hover: false, bobAmp: 1, drawY: 900
+        votes: 0, hover: false, bobAmp: 1, drawY: 900, shx: 0, shy: 0, tilt: 0
       };
       Tween.to(card, { x: home.x, y: home.y, rot: home.rot, scale: CARD_SCALE }, 0.55, {
         ease: Ease.outBack, delay: i * 0.14, onStart: () => Sound.flip()
@@ -870,6 +870,13 @@ const MatchScene = {
       c.pop.target = c.hover ? 1.05 : 1;
       c.pop.update(dt);
       c.badge.update(dt);
+      // light position for the holo foil: follows the pointer when hovered, otherwise a slow idle drift
+      const tx = h ? clamp(hot.lx / (CARD_W / 2), -1, 1) : Math.sin(this.t * 0.55 + c.i * 1.7) * 0.5;
+      const ty = h ? clamp(hot.ly / (CARD_H / 2), -1, 1) : Math.cos(this.t * 0.42 + c.i * 1.1) * 0.35;
+      const k = Math.min(1, dt * (h ? 10 : 2.5));
+      c.shx += (tx - c.shx) * k;
+      c.shy += (ty - c.shy) * k;
+      c.tilt = clamp(-c.lift.v / 24, 0, 1);
       const bob = canHover ? Math.sin(this.t * 2.2 + c.i * 1.3) * 5 : 0;
       c.drawY = c.y + c.lift.v + bob;
     }

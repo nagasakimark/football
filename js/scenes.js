@@ -222,7 +222,7 @@ const MenuScene = {
     Tween.to(this.header, { a: 1 }, 0.5, { ease: Ease.outBack });
     this.motes = makeMotes(18);
 
-    const keys = Object.keys(CATEGORIES);
+    const keys = ACTIVE_CATEGORY_KEYS;
     this.tiles = keys.map((key, i) => {
       const cat = CATEGORIES[key];
       const row = Math.floor(i / 5), col = i % 5;

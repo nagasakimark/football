@@ -5,6 +5,12 @@
 
 // question: what the teacher asks. proper: nouns keep a capital letter in "I like ..."
 const CATEGORIES = {
+  halloween: {
+    label: 'Halloween', folder: 'halloween', ext: 'png', accent: '#6b3fa0', type: 'darkness',
+    question: 'What do you like about Halloween?',
+    plural: { bats: 'bats', blackcat: 'black cats', ghost: 'ghosts', mummy: 'mummies', pumpkin: 'pumpkins', skeleton: 'skeletons', witch: 'witches' },
+    items: ['pumpkin','ghost','witch','bats','blackcat','mummy','skeleton']
+  },
   fruits: {
     label: 'Fruits', folder: 'fruits', ext: 'png', accent: '#ff4d6d', type: 'grass',
     question: 'What fruit do you like?',
@@ -68,6 +74,7 @@ const CATEGORIES = {
     items: ['happy','sad','angry','hungry','sleepy','tired','hot','cold']
   },
   prizes: {
+    disabled: true, // hidden from the menu; set to false to bring it back
     label: 'Prizes', folder: 'prizes', accent: '#ffd166', type: 'lightning', photo: true,
     question: 'Which prize do you like?',
     items: [
@@ -107,6 +114,7 @@ const CARD_TYPES = {
   fighting:  { name: 'Fighting',  top: '#ffe0c4', bottom: '#d9864a', dark: '#8a4618', orb: '#c46a2a' },
   metal:     { name: 'Metal',     top: '#eef2f6', bottom: '#9fb0c0', dark: '#4c5b6a', orb: '#7d8fa0' },
   colorless: { name: 'Colorless', top: '#fffaf0', bottom: '#d9ccb0', dark: '#7c6a48', orb: '#b7a37a' },
+  darkness:  { name: 'Darkness',  top: '#e4d6f5', bottom: '#8a62c4', dark: '#2e1a5c', orb: '#5b3a99' },
   fairy:     { name: 'Fairy',     top: '#ffe2f1', bottom: '#f08cc0', dark: '#a02c6a', orb: '#e0609c' }
 };
 
@@ -116,7 +124,7 @@ const MODES = {
   teams:   { label: 'Team Battle', blurb: 'Red vs Blue penalty shootout — 5 kicks each!', color: '#ff5a5a' }
 };
 
-const SPECIAL_LABELS = { tabletennis: 'Table Tennis' };
+const SPECIAL_LABELS = { tabletennis: 'Table Tennis', blackcat: 'Black Cat' };
 
 const GOAL_LINES = ['What a strike!', 'Top corner!', 'Unstoppable!', 'The crowd goes wild!', 'Super shot!', 'Amazing!'];
 const SAVE_LINES = ['Great save!', 'So close!', 'Nice try!', 'The keeper got it!', 'Next time!'];
@@ -139,3 +147,6 @@ function itemSentence(cat, item) {
   const word = cat.proper ? label : label.toLowerCase();
   return `${cat.sentence || 'I like'} ${word}!`;
 }
+
+// Categories shown in the menu (Prizes is switched off with `disabled: true`)
+const ACTIVE_CATEGORY_KEYS = Object.keys(CATEGORIES).filter(k => !CATEGORIES[k].disabled);

@@ -15,6 +15,7 @@ const MatchScene = {
     this.catKey = data.category;
     this.cat = CATEGORIES[this.catKey];
     this.mode = data.mode || 'classic';
+    this.spooky = this.catKey === 'halloween';
     this.leaving = false;
     this.t = 0;
     this.round = 0;
@@ -44,6 +45,7 @@ const MatchScene = {
     this.keeper = null;
     this.ball = null;
     Stadium.resetCam();
+    Stadium.setTheme(this.spooky ? 'halloween' : null);
     Stadium.net.impact = null;
 
     this.backBtn = new Button({ x: 50, y: 46, w: 64, circle: true, color: '#2a75bb', icon: Icons.back, onClick: () => this.leave() });
@@ -58,7 +60,7 @@ const MatchScene = {
     this.startRound();
   },
 
-  exit() { this.roundId++; },
+  exit() { this.roundId++; Stadium.setTheme(null); },
 
   leave() {
     if (this.leaving) return;
@@ -153,6 +155,7 @@ const MatchScene = {
 
     // intro banner
     Sound.whistle();
+    if (this.spooky) Timers.after(0.45, () => Sound.spooky());
     if (this.mode === 'teams') {
       const team = this.currentTeam();
       const n = this.teams[team].length + 1;
@@ -161,7 +164,7 @@ const MatchScene = {
       this.showBanner('GOLDEN BALL!', 'Worth 2 goals!', '#ffb700');
       Sound.sparkle();
     } else {
-      this.showBanner(`ROUND ${this.round}`, this.mode === 'vote' ? 'Class vote!' : pick(['Get ready!', 'Say it loud!', 'You can do it!']), '#2a75bb');
+      this.showBanner(`ROUND ${this.round}`, this.mode === 'vote' ? 'Class vote!' : pick(this.spooky ? HALLOWEEN_ROUND_LINES : ['Get ready!', 'Say it loud!', 'You can do it!']), this.spooky ? '#7a3fc4' : '#2a75bb');
     }
 
     // old cards leave, new cards are dealt once images are ready
@@ -531,7 +534,9 @@ const MatchScene = {
     Sound.fanfare();
 
     // celebration
-    const cols = golden ? ['#fff3b0', '#ffcb05', '#ffb700', '#ffffff', '#ff9f1c'] : undefined;
+    const cols = golden ? ['#fff3b0', '#ffcb05', '#ffb700', '#ffffff', '#ff9f1c']
+      : this.spooky ? ['#ff8a1a', '#ffcb05', '#a66bff', '#7CFC00', '#ffffff', '#ff5a1a'] : undefined;
+    if (this.spooky) { Timers.after(0.2, () => Sound.cackle()); }
     Timers.after(0.05, () => {
       FX.confettiCannon(-20, 740, 1, golden ? 110 : 80, cols);
       FX.confettiCannon(W + 20, 740, -1, golden ? 110 : 80, cols);
@@ -539,7 +544,7 @@ const MatchScene = {
     const fw = golden ? 7 : 4;
     for (let i = 0; i < fw; i++) {
       Timers.after(0.3 + i * 0.32, () => {
-        FX.firework(rand(160, W - 160), rand(90, 260), pick(['#ffcb05', '#ff4d6d', '#4cc9f0', '#7CFC00', '#ff9f1c', '#c77dff']));
+        FX.firework(rand(160, W - 160), rand(90, 260), pick(this.spooky ? ['#ff8a1a', '#ffcb05', '#a66bff', '#7CFC00', '#ff5a1a'] : ['#ffcb05', '#ff4d6d', '#4cc9f0', '#7CFC00', '#ff9f1c', '#c77dff']));
         Sound.pop();
       });
     }
@@ -549,7 +554,7 @@ const MatchScene = {
 
     // scoring per mode
     let titleText = 'GOAL!';
-    let sub = pick(GOAL_LINES);
+    let sub = pick(this.spooky ? HALLOWEEN_GOAL_LINES : GOAL_LINES);
     if (this.mode === 'classic') {
       const pts = golden ? 2 : 1;
       this.stats.shots++;
@@ -575,7 +580,8 @@ const MatchScene = {
 
     this.title = new BigTitle(titleText, {
       size: titleText.length > 6 ? 118 : 160, y: 250,
-      colors: golden ? ['#ffffff', '#fff27a', '#ffb700'] : ['#fffbd0', '#ffd21f', '#ff8a00']
+      colors: golden ? ['#ffffff', '#fff27a', '#ffb700'] : this.spooky ? ['#fff3c0', '#ffa21f', '#e8590c'] : ['#fffbd0', '#ffd21f', '#ff8a00'],
+      outline: this.spooky ? '#2a0a4a' : undefined
     });
     Timers.after(0.45, () => { this.subRibbon = { text: sub, a: 0, color: golden ? '#e0a100' : '#e3262f' }; Tween.to(this.subRibbon, { a: 1 }, 0.35, { ease: Ease.outBack }); });
 
@@ -621,7 +627,8 @@ const MatchScene = {
       });
     }
 
-    let sub = pick(SAVE_LINES);
+    let sub = pick(this.spooky ? HALLOWEEN_SAVE_LINES : SAVE_LINES);
+    if (this.spooky) Sound.boo();
     if (this.mode === 'classic') {
       this.stats.shots++;
       this.stats.streak = 0;
@@ -631,8 +638,8 @@ const MatchScene = {
       this.teams[team].push(false);
       sub = 'Great save, keeper!';
     }
-    this.title = new BigTitle('SAVED!', { size: 150, y: 250, colors: ['#ffffff', '#c4e4ff', '#5aa9ff'], outline: '#0b2a6b' });
-    Timers.after(0.4, () => { this.subRibbon = { text: sub, a: 0, color: '#2a75bb' }; Tween.to(this.subRibbon, { a: 1 }, 0.35, { ease: Ease.outBack }); });
+    this.title = new BigTitle(this.spooky ? 'BOO!' : 'SAVED!', { size: 150, y: 250, colors: this.spooky ? ['#f3e8ff', '#c9a6ff', '#8a52e0'] : ['#ffffff', '#c4e4ff', '#5aa9ff'], outline: this.spooky ? '#2a0a4a' : '#0b2a6b' });
+    Timers.after(0.4, () => { this.subRibbon = { text: sub, a: 0, color: this.spooky ? '#6b3fa0' : '#2a75bb' }; Tween.to(this.subRibbon, { a: 1 }, 0.35, { ease: Ease.outBack }); });
     Tween.to(Stadium.cam, { zoom: 1, x: 640, y: 360 }, 1.2, { ease: Ease.inOutQuad, delay: 0.3 });
     Timers.after(1.4, () => this.showResultButtons());
   },
@@ -938,6 +945,7 @@ const MatchScene = {
     Stadium.applyCam(ctx);
     Stadium.drawBackground(ctx);
     Stadium.drawGoal(ctx);
+    Stadium.drawThemeProps(ctx);
     for (const tg of this.targets) this.drawTarget(ctx, tg, t);
     Stadium.drawKeeper(ctx, this.keeper);
     this.drawTrail(ctx);
@@ -984,6 +992,7 @@ const MatchScene = {
     }
     if (this.final) this.drawFinal(ctx);
     this.drawFlyers(ctx);
+    Stadium.drawThemeOverlay(ctx);
     this.drawHUD(ctx, t);
     this.buttons.forEach(b => b.draw(ctx));
     Particles.draw(ctx, 'ui');

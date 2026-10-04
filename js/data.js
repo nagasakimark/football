@@ -127,6 +127,9 @@ const MODES = {
 const SPECIAL_LABELS = { tabletennis: 'Table Tennis', blackcat: 'Black Cat' };
 
 const GOAL_LINES = ['What a strike!', 'Top corner!', 'Unstoppable!', 'The crowd goes wild!', 'Super shot!', 'Amazing!'];
+const HALLOWEEN_GOAL_LINES = ['Spooktacular!', 'Boo-tiful shot!', 'Fang-tastic!', 'Ghoulishly good!', 'Hauntingly good!', 'Wicked shot!'];
+const HALLOWEEN_SAVE_LINES = ['Boo! Nice try!', 'A spooky save!', 'So close!', 'The keeper got it!', 'Next time!'];
+const HALLOWEEN_ROUND_LINES = ['Trick or treat!', 'Spooky time!', 'Say it loud!', 'You can do it!'];
 const SAVE_LINES = ['Great save!', 'So close!', 'Nice try!', 'The keeper got it!', 'Next time!'];
 
 function itemPath(cat, item) {

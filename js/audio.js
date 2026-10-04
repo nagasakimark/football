@@ -116,6 +116,15 @@ const Sound = {
   },
 
   // ---------- recipes ----------
+  // Friendly "ooOOoo" ghost wobble
+  spooky() {
+    [0, 0.18].forEach((d, i) => {
+      this.tone(i ? 330 : 392, 0.4, { type: 'sine', vol: 0.07, slide: i ? 262 : 311, delay: d, attack: 0.08 });
+      this.tone((i ? 330 : 392) * 1.5, 0.35, { type: 'triangle', vol: 0.03, slide: (i ? 262 : 311) * 1.5, delay: d + 0.03, attack: 0.08 });
+    });
+  },
+  boo() { this.tone(240, 0.45, { type: 'sawtooth', vol: 0.04, slide: 130 }); this.tone(250, 0.45, { type: 'sine', vol: 0.08, slide: 120, delay: 0.02 }); },
+  cackle() { for (let i = 0; i < 5; i++) this.tone(520 + (i % 2) * 90, 0.07, { type: 'square', vol: 0.03, delay: i * 0.08 }); },
   click() { this.tone(900, 0.05, { type: 'triangle', vol: 0.1 }); },
   hover() { this.tone(1400, 0.03, { type: 'sine', vol: 0.035 }); },
   blip(step = 0) {

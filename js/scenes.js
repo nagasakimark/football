@@ -133,6 +133,13 @@ const TitleScene = {
     Sound.unlock();
     Sound.whistle();
     FX.sparkleBurst(640, 540, 22);
+    // a link like .../football/#fruits starts a match on that category (once; Back still leads to the menu)
+    const deep = decodeURIComponent(location.hash.slice(1));
+    if (CATEGORIES[deep] && !CATEGORIES[deep].disabled && !Game.deepUsed) {
+      Game.deepUsed = true;
+      Engine.go(MatchScene, { category: deep, mode: Game.mode }, 640, 540);
+      return;
+    }
     Engine.go(MenuScene, null, 640, 540);
   },
   exit() { this.leaving = false; },

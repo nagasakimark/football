@@ -128,6 +128,11 @@ const GifDecoder = (() => {
     const delays = [];
     let gce = { disposal: 0, delay: 0, transparent: -1 };
     let prev = null; // { disposal, x, y, w, h }
+    let slice = performance.now();
+    // Hand the page back whenever ~6ms of decoding has piled up, so animation never stalls.
+    const breathe = async () => {
+      if (performance.now() - slice > 6) { await new Promise(r => setTimeout(r, 0)); slice = performance.now(); }
+    };
 
     while (p < bytes.length) {
       const block = bytes[p++];
@@ -184,6 +189,7 @@ const GifDecoder = (() => {
       }
       if (gce.disposal === 3) saved = new Uint8ClampedArray(buf);
 
+      await breathe();
       let pixels = lzwDecode(minCode, sub.data, fw * fh);
       if (interlaced) pixels = deinterlace(pixels, fw, fh);
       const tr = gce.transparent;
@@ -205,6 +211,7 @@ const GifDecoder = (() => {
         }
       }
 
+      await breathe();
       wctx.putImageData(image, 0, 0);
       const fc = document.createElement('canvas');
       fc.width = outW; fc.height = outH;
@@ -217,8 +224,7 @@ const GifDecoder = (() => {
       prev = { disposal: gce.disposal, x: fx, y: fy, w: fw, h: fh };
       gce = { disposal: 0, delay: 0, transparent: -1 };
 
-      // Keep the game smooth while decoding big GIFs
-      if (frames.length % 6 === 0) await new Promise(r => setTimeout(r, 0));
+      await breathe();
     }
 
     return { width: outW, height: outH, frames, delays };

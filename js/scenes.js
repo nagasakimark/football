@@ -172,12 +172,13 @@ const TitleScene = {
     Stadium.drawKeeper(ctx, this.goalie);
     ctx.restore();
 
-    const v = Engine.view();
-    const vg = ctx.createRadialGradient(640, 330, 150, 640, 360, 820);
-    vg.addColorStop(0, 'rgba(5,10,40,0.25)');
-    vg.addColorStop(1, 'rgba(5,10,40,0.8)');
-    ctx.fillStyle = vg;
-    ctx.fillRect(v.x, v.y, v.w, v.h);
+    ScreenLayers.draw(ctx, 'title-vignette', (g, v) => {
+      const vg = g.createRadialGradient(640, 330, 150, 640, 360, 820);
+      vg.addColorStop(0, 'rgba(5,10,40,0.25)');
+      vg.addColorStop(1, 'rgba(5,10,40,0.8)');
+      g.fillStyle = vg;
+      g.fillRect(v.x, v.y, v.w, v.h);
+    });
     drawSparkleMotes(ctx, this.motes, t);
 
     // Logo

@@ -334,6 +334,21 @@ const Holo = {
     }
     this.tex = t; this.pad = pad;
   },
+  // The fine diagonal "foil lines", drawn once (they never move)
+  linesSprite() {
+    if (this._lines) return this._lines;
+    const c = document.createElement('canvas');
+    c.width = Math.round(CARD_W * HOLO_RES); c.height = Math.round(CARD_H * HOLO_RES);
+    const g = c.getContext('2d');
+    g.setTransform(HOLO_RES, 0, 0, HOLO_RES, 0, 0);
+    g.strokeStyle = '#fff';
+    g.lineWidth = 1;
+    for (let i = -CARD_H; i < CARD_W + CARD_H; i += 5) {
+      g.beginPath(); g.moveTo(i, 0); g.lineTo(i - CARD_H * 0.55, CARD_H); g.stroke();
+    }
+    this._lines = c;
+    return c;
+  },
   addRR(g, x, y, w, h, r) {
     g.moveTo(x + r, y);
     g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r);
@@ -351,12 +366,41 @@ const Holo = {
 // foil palette from pokemon-cards-css (violet, blue, green, yellow, red), repeated
 const RAINBOW = ['#c929f1', '#0dbde9', '#21e985', '#eedf10', '#f80e7b'];
 
+// Each card keeps its own finished foil + glitter and only rebuilds them when the light moves
+// (hover tilt) or the slow rainbow drift has moved a whole pixel: the same picture, a fraction of the work.
+const HoloCache = new WeakMap();
+function holoFor(card) {
+  let h = HoloCache.get(card);
+  if (!h) {
+    const mk = () => {
+      const c = document.createElement('canvas');
+      c.width = Math.round(CARD_W * HOLO_RES); c.height = Math.round(CARD_H * HOLO_RES);
+      return c;
+    };
+    const layer = mk(), glit = mk();
+    h = { layer, glit, lg: layer.getContext('2d'), gg: glit.getContext('2d'), fkey: '', gkey: '' };
+    HoloCache.set(card, h);
+  }
+  return h;
+}
+
 function drawHolo(ctx, card, time) {
   Holo.init();
   const px = clamp(card.shx || 0, -1, 1), py = clamp(card.shy || 0, -1, 1);
   const lx = CARD_W / 2 + px * CARD_W * 0.42, ly = CARD_H * 0.38 + py * CARD_H * 0.3; // light position on the card
   const amt = 0.45 + (card.tilt || 0) * 0.55;    // a little stronger while hovered
-  const lg = Holo.lg, gg = Holo.gg;
+  const H = holoFor(card);
+  const lg = H.lg, gg = H.gg;
+  const dx = 0.94, dy = 0.34;                    // CSS 110deg gradient direction, like the real foil
+  const shift = (px * 0.5 + py * 0.2) * 360 + time * 5;
+  const fkey = Math.round(shift) + ',' + Math.round(lx * 2) + ',' + Math.round(ly * 2);
+  const gkey = Math.round(px * 18) + ',' + Math.round(py * 18) + ',' + Math.round(lx * 2) + ',' + Math.round(ly * 2);
+  if (fkey !== H.fkey) { H.fkey = fkey; buildFoil(lg, Math.round(shift), lx, ly, dx, dy); }
+  if (gkey !== H.gkey) { H.gkey = gkey; buildGlitter(gg, px, py, lx, ly); }
+  compositeHolo(ctx, H, amt);
+}
+
+function buildFoil(lg, shift, lx, ly, dx, dy) {
 
   // ---- rainbow foil layer
   lg.setTransform(HOLO_RES, 0, 0, HOLO_RES, 0, 0);
@@ -365,8 +409,6 @@ function drawHolo(ctx, card, time) {
   lg.clearRect(0, 0, CARD_W, CARD_H);
   lg.save();
   Holo.clipMask(lg);
-  const dx = 0.94, dy = 0.34;                    // CSS 110deg gradient direction, like the real foil
-  const shift = (px * 0.5 + py * 0.2) * 360 + time * 5;
   const L = 420;
   const grad = lg.createLinearGradient(CARD_W / 2 - dx * L + dx * shift, CARD_H / 2 - dy * L + dy * shift,
     CARD_W / 2 + dx * L + dx * shift, CARD_H / 2 + dy * L + dy * shift);
@@ -380,11 +422,7 @@ function drawHolo(ctx, card, time) {
   // fine diagonal "foil lines" that catch the light
   lg.globalCompositeOperation = 'overlay';
   lg.globalAlpha = 0.45;
-  lg.strokeStyle = '#fff';
-  lg.lineWidth = 1;
-  for (let i = -CARD_H; i < CARD_W + CARD_H; i += 5) {
-    lg.beginPath(); lg.moveTo(i, 0); lg.lineTo(i - CARD_H * 0.55, CARD_H); lg.stroke();
-  }
+  lg.drawImage(Holo.linesSprite(), 0, 0, CARD_W, CARD_H);
   // soft glare at the light position (inside the mask only)
   lg.globalCompositeOperation = 'source-over';
   lg.globalAlpha = 1;
@@ -394,7 +432,9 @@ function drawHolo(ctx, card, time) {
   lg.fillStyle = gl;
   lg.fillRect(0, 0, CARD_W, CARD_H);
   lg.restore();
+}
 
+function buildGlitter(gg, px, py, lx, ly) {
   // ---- glitter: bright specks that only show near the light
   gg.setTransform(HOLO_RES, 0, 0, HOLO_RES, 0, 0);
   gg.globalCompositeOperation = 'source-over';
@@ -410,21 +450,23 @@ function drawHolo(ctx, card, time) {
   gg.fillStyle = gm;
   gg.fillRect(0, 0, CARD_W, CARD_H);
   gg.restore();
+}
 
+function compositeHolo(ctx, H, amt) {
   // ---- composite onto the card with blend modes (no additive white = no flash)
   ctx.save();
   const x = -CARD_W / 2, y = -CARD_H / 2;
   ctx.globalCompositeOperation = 'soft-light';
   ctx.globalAlpha = 0.72 * amt;
-  ctx.drawImage(Holo.layer, x, y, CARD_W, CARD_H);
+  ctx.drawImage(H.layer, x, y, CARD_W, CARD_H);
   ctx.globalCompositeOperation = 'overlay';
   ctx.globalAlpha = 0.3 * amt;
-  ctx.drawImage(Holo.layer, x, y, CARD_W, CARD_H);
+  ctx.drawImage(H.layer, x, y, CARD_W, CARD_H);
   ctx.globalCompositeOperation = 'color-dodge';
   ctx.globalAlpha = 0.05 * amt;
-  ctx.drawImage(Holo.layer, x, y, CARD_W, CARD_H);
+  ctx.drawImage(H.layer, x, y, CARD_W, CARD_H);
   ctx.globalCompositeOperation = 'screen';
   ctx.globalAlpha = 0.5;
-  ctx.drawImage(Holo.glit, x, y, CARD_W, CARD_H);
+  ctx.drawImage(H.glit, x, y, CARD_W, CARD_H);
   ctx.restore();
 }
